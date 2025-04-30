@@ -10,7 +10,7 @@ from selenium.webdriver.chrome.options import Options
 def driver(base_url):  # uses base_url from test file
     options = Options()
     options.add_argument("--headless")
-    #driver = webdriver.Chrome(options=options)
+    # driver = webdriver.Chrome(options=options)
     driver = webdriver.Chrome()
     driver.maximize_window()
     driver.get(base_url)  # navigate to URL first
