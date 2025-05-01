@@ -9,7 +9,7 @@ A simple Selenium test suite using Pytest to automate UI testing on the Selenium
 - `test_demo_site.py` — Main test cases
 - `conftest.py` — Fixtures and setup for WebDriver
 - `screenshots/` — Saved screenshots from failed tests
-- `log.html` — Test execution report (generated automatically)
+- `reports/report.html` — Test execution report (generated automatically)
 
 ---
 
@@ -29,13 +29,18 @@ Visit [https://rye-up.com](https://rye-up.com) for installation instructions.
 rye sync
 ```
 
-### 4. Run tests with HTML report
+### 4. Run tests (headless by default)
 ```bash
-pytest --html=log.html --self-contained-html
+pytest
 ```
 
-### 5. Check report
-Open `log.html` in your browser.
+### 5. Run tests with browser visible (headed mode)
+```bash
+pytest --headed
+```
+
+### 6. Check report
+Open `reports/report.html` in your browser.
 
 ---
 
