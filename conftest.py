@@ -9,6 +9,7 @@ from pytest_metadata.plugin import metadata_key
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
+from selenium.webdriver.edge.options import Options as EdgeOptions
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -49,8 +50,8 @@ def pytest_configure(config):
     should_remove = config.getoption("--remove")
 
     # Validate browser type
-    if browser not in ["chrome", "firefox"]:
-        pytest.exit(f"Unsupported browser: {browser}. Supported browsers: firefox, chrome (default)", returncode=1)
+    if browser not in ["chrome", "firefox", "edge"]:
+        pytest.exit(f"Unsupported browser: {browser}. Supported browsers: chrome (default), firefox, edge", returncode=1)
 
     config.stash[metadata_key]["Project"] = "selenium_pytest"
     config.stash[metadata_key]["Browser"] = browser
@@ -86,6 +87,12 @@ def driver(base_url, request):  # uses base_url from test file
         if not headed:
             options.add_argument("--headless")
         driver = webdriver.Firefox(options=options)
+    elif browser == "edge":
+        print("Launching Edge")
+        options = EdgeOptions()
+        if not headed:
+            options.add_argument("--headless")
+        driver = webdriver.Edge(options=options)
     else:
         logging.info("Launching Chrome")
         options = ChromeOptions()
