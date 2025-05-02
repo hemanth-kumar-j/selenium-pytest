@@ -51,7 +51,10 @@ def pytest_configure(config):
 
     # Validate browser type
     if browser not in ["chrome", "firefox", "edge"]:
-        pytest.exit(f"Unsupported browser: {browser}. Supported browsers: chrome (default), firefox, edge", returncode=1)
+        pytest.exit(
+            f"Unsupported browser: {browser}. Supported browsers: chrome (default), firefox, edge",
+            returncode=1,
+        )
 
     config.stash[metadata_key]["Project"] = "selenium_pytest"
     config.stash[metadata_key]["Browser"] = browser

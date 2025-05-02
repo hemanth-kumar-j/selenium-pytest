@@ -24,22 +24,28 @@ cd selenium_pytest
 ### 2. Install Rye (if not already installed)
 Visit [https://rye-up.com](https://rye-up.com) for installation instructions.
 
-### 3. Setup Environment
+### 3. Set Up the Environment
 ```bash
 rye sync
 ```
 
-### 4. Run tests (headless by default)
+### 4. Run Tests (Headless Chrome by Default)
 ```bash
 pytest
 ```
 
-### 5. Run tests with browser visible (headed mode)
+### 5. Run Tests with Browser UI (Headed Mode)
 ```bash
 pytest --headed
 ```
 
-### 6. Check report
+### 6. Run Tests with Other Browsers
+```bash
+pytest --browser=firefox
+pytest --browser=edge
+```
+
+### 7. View Test Report
 Open `reports/report.html` in your browser.
 
 ---
