@@ -1,26 +1,74 @@
 import os
+import time
 import pytest
+import logging
 import pytest_html
+
 from selenium import webdriver
 from pytest_metadata.plugin import metadata_key
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 def pytest_addoption(parser):
+    parser.addoption(
+        "--browser",
+        action="store",
+        default="chrome",
+        help="Browser type: chrome, or firefox",
+    )
     parser.addoption(
         "--headed",
         action="store_true",
         default=False,
         help="Run tests with browser visible (non-headless mode)",
     )
+    parser.addoption(
+        "--timeout",
+        action="store",
+        default=10,
+        type=int,
+        help="WebDriverWait timeout in seconds (default: 10)",
+    )
+    parser.addoption(
+        "--remove",
+        action="store_true",
+        default=False,
+        help="Remove old screenshots before running tests",
+    )
 
 
 def pytest_configure(config):
+    browser = config.getoption("--browser").lower()
+    headed = config.getoption("--headed")
+    should_remove = config.getoption("--remove")
+
+    # Validate browser type
+    if browser not in ["chrome", "firefox"]:
+        pytest.exit(f"Unsupported browser: {browser}", returncode=1)
+
     config.stash[metadata_key]["Project"] = "selenium_pytest"
+    config.stash[metadata_key]["Browser"] = browser
+    if not headed:
+        config.stash[metadata_key]["Mode"] = "headless"
 
     # Ensure the screenshots folder exists
     os.makedirs("screenshots", exist_ok=True)
+
+    if should_remove:
+        logging.info("Removing old screenshots...")
+        for filename in os.listdir("screenshots"):
+            file_path = os.path.join("screenshots", filename)
+            try:
+                if os.path.isfile(file_path):
+                    os.unlink(file_path)
+            except Exception as e:
+                logging.error(f"Error deleting file {file_path}: {e}")
 
 
 def pytest_html_report_title(report):
@@ -29,13 +77,21 @@ def pytest_html_report_title(report):
 
 @pytest.fixture(scope="session")
 def driver(base_url, request):  # uses base_url from test file
-    options = Options()
-    # Enable headless only if --headed is NOT passed
-    if not request.config.getoption("--headed"):
-        options.add_argument("--headless")
+    browser = request.config.getoption("--browser").lower()
+    headed = request.config.getoption("--headed")
 
-    driver = webdriver.Chrome(options=options)
-    # driver = webdriver.Chrome()
+    if browser == "firefox":
+        logging.info("Launching Firefox")
+        options = FirefoxOptions()
+        if not headed:
+            options.add_argument("--headless")
+        driver = webdriver.Firefox(options=options)
+    else:
+        logging.info("Launching Chrome")
+        options = ChromeOptions()
+        if not headed:
+            options.add_argument("--headless")
+        driver = webdriver.Chrome(options=options)
     driver.maximize_window()
     driver.get(base_url)  # navigate to URL first
     yield driver
@@ -43,11 +99,9 @@ def driver(base_url, request):  # uses base_url from test file
 
 
 @pytest.fixture
-def wait(driver):
-    def _wait(timeout=10):  # default timeout is 10 seconds
-        return WebDriverWait(driver, timeout)
-
-    return _wait
+def wait(driver, request):
+    timeout = request.config.getoption("--timeout")
+    return WebDriverWait(driver, timeout)
 
 
 # This hook adds screenshots and driver URL to the HTML report on test failure
@@ -63,8 +117,10 @@ def pytest_runtest_makereport(item, call):
         if (report.skipped and xfail) or (report.failed and not xfail):
             driver = item.funcargs.get("driver", None)
             if driver:
-                # Save screenshot
-                screenshot_path = os.path.join("screenshots", f"{item.name}.png")
+                # Timestamped screenshot filename
+                timestamp = time.strftime("%Y%m%d_%H%M%S")
+                screenshot_name = f"{item.name}_{timestamp}.png"
+                screenshot_path = os.path.join("screenshots", screenshot_name)
                 driver.save_screenshot(screenshot_path)
 
                 # Relative path from HTML report (in reports/) to screenshot
