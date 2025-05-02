@@ -45,7 +45,17 @@ pytest --browser=firefox
 pytest --browser=edge
 ```
 
-### 7. View Test Report
+### 7. Set a Custom Timeout (in seconds)
+```bash
+pytest --timeout=20
+```
+
+### 8. Remove Old Screenshots Before Test Run
+```bash
+pytest --remove
+```
+
+### 9. View Test Report
 Open `reports/report.html` in your browser.
 
 ---
