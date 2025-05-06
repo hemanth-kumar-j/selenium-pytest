@@ -1,5 +1,6 @@
 import os
 import time
+import base64
 import pytest
 import logging
 import pytest_html
@@ -133,16 +134,15 @@ def pytest_runtest_makereport(item, call):
                 screenshot_path = os.path.join("screenshots", screenshot_name)
                 driver.save_screenshot(screenshot_path)
 
-                # Relative path from HTML report (in reports/) to screenshot
-                relative_path = f"../{screenshot_path}"
+                # Read and encode the image in base64
+                with open(screenshot_path, "rb") as f:
+                    encoded_image = base64.b64encode(f.read()).decode()
 
-                # Add extras
+                # Embed screenshot into report using base64
+                html_img = f'<div><img src="data:image/png;base64,{encoded_image}" alt="screenshot" style="max-width:600px; max-height:400px;" /></div>'
+                extras.append(pytest_html.extras.html(html_img))
+
+                # Optionally add the page URL
                 extras.append(pytest_html.extras.url(driver.current_url))
-                extras.append(pytest_html.extras.image(relative_path))
-                extras.append(
-                    pytest_html.extras.html(
-                        "<div>Test failed — Screenshot attached.</div>"
-                    )
-                )
 
         report.extras = extras
