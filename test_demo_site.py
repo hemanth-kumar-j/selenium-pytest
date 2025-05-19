@@ -21,14 +21,14 @@ def wait_for_element(driver):
 def test_hover_dropdown(driver, wait):
 
     def select_dropdown_links(link_text):
-        wait(5).until(
+        wait.until(
             EC.presence_of_element_located((By.XPATH, "//div[text()='Hover Dropdown']"))
         )
         ActionChains(driver).move_to_element(
             driver.find_element(By.XPATH, "//div[text()='Hover Dropdown']")
         ).perform()
         driver.find_element(By.LINK_TEXT, f"{link_text}").click()
-        wait().until(
+        wait.until(
             EC.text_to_be_present_in_element(
                 (By.TAG_NAME, "h3"), f"{link_text} Selected"
             )
@@ -92,8 +92,8 @@ def test_paragraph_with_text(driver):
 def test_svg_animation(driver, wait):
     rect = driver.find_element(By.ID, "svgRect")
     rect.click()
-    wait().until(lambda d: rect.value_of_css_property("opacity") == "1")
-    wait().until(lambda d: rect.get_attribute("width") == "154")
+    wait.until(lambda d: rect.value_of_css_property("opacity") == "1")
+    wait.until(lambda d: rect.get_attribute("width") == "154")
     final_opacity = rect.value_of_css_property("opacity")
     final_width = rect.get_attribute("width")
     assert "1" == final_opacity, "Opacity animation did not complete"
