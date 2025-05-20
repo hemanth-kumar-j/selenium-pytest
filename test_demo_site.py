@@ -4,6 +4,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver import ActionChains, Keys
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
+from drag_utils import html5_drag_and_drop
 
 
 # Set the URL here
@@ -21,13 +22,16 @@ def wait_for_element(driver):
 def test_hover_dropdown(driver, wait):
 
     def select_dropdown_links(link_text):
-        wait.until(
+        actions = ActionChains(driver)
+        dropdown = wait.until(
             EC.presence_of_element_located((By.XPATH, "//div[text()='Hover Dropdown']"))
         )
-        ActionChains(driver).move_to_element(
-            driver.find_element(By.XPATH, "//div[text()='Hover Dropdown']")
-        ).perform()
-        driver.find_element(By.LINK_TEXT, f"{link_text}").click()
+        actions.move_to_element(dropdown).perform()
+        dropdown_link = wait.until(
+            EC.visibility_of_element_located((By.LINK_TEXT, f"{link_text}"))
+        )
+        actions.move_to_element(dropdown_link).perform()
+        dropdown_link.click()
         wait.until(
             EC.text_to_be_present_in_element(
                 (By.TAG_NAME, "h3"), f"{link_text} Selected"
@@ -200,7 +204,7 @@ def test_checkbox_and_drag_n_drop(driver):
     def check_drag_n_drop():
         source = driver.find_element(By.ID, "logo")
         target = driver.find_element(By.ID, "drop2")
-        ActionChains(driver).drag_and_drop(source, target).perform()
+        html5_drag_and_drop(driver, source, target)
         new_parent = source.find_element(By.XPATH, "..")
         assert new_parent == target, "Drag and Drop failed! Image is not inside Drop B."
 

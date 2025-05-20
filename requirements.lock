@@ -17,6 +17,8 @@ certifi==2025.1.31
     # via selenium
 click==8.1.8
     # via black
+execnet==2.1.1
+    # via pytest-xdist
 h11==0.14.0
     # via wsproto
 idna==3.10
@@ -46,11 +48,14 @@ pysocks==1.7.1
 pytest==8.3.5
     # via pytest-html
     # via pytest-metadata
+    # via pytest-xdist
     # via selenium-pytest
 pytest-html==4.1.1
     # via selenium-pytest
 pytest-metadata==3.1.1
     # via pytest-html
+pytest-xdist==3.6.1
+    # via selenium-pytest
 selenium==4.29.0
     # via selenium-pytest
 sniffio==1.3.1
