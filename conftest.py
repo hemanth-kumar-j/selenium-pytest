@@ -22,7 +22,7 @@ def pytest_addoption(parser):
         "--browser",
         action="store",
         default="chrome",
-        help="Browser type: chrome, or firefox",
+        help="Comma-separated list of browsers: chrome,firefox,edge",
     )
     parser.addoption(
         "--headed",
@@ -43,76 +43,128 @@ def pytest_addoption(parser):
         default=False,
         help="Remove old screenshots before running tests",
     )
-
+    parser.addoption(
+        "--individual-browsers",
+        action="store_true",
+        help="Run all browsers one after another",
+    )
+    parser.addoption(
+        "--parallel-browsers",
+        action="store_true",
+        help="Run tests in parallel across browsers",
+    )
 
 def pytest_configure(config):
-    browser = config.getoption("--browser").lower()
-    headed = config.getoption("--headed")
-    should_remove = config.getoption("--remove")
+    #browsers = config.getoption("browser")
+    browsers = [b.strip() for b in config.getoption("browser").split(",")]
+    parallel_xdist = config.getoption("numprocesses") not in [None, 0]
+    individual = config.getoption("individual-browsers", False)
+    parallel_browsers = config.getoption("parallel_browsers", False)
+    remove_old = config.getoption("remove")
 
-    # Validate browser type
-    if browser not in ["chrome", "firefox", "edge"]:
-        pytest.exit(
-            f"Unsupported browser: {browser}. Supported browsers: chrome (default), firefox, edge",
-            returncode=1,
-        )
+    if (parallel_xdist and len(browsers) > 1) or (parallel_browsers):
+        config._driver_scope = "function"
+        config._wait_scope = "function"
+    else:
+        config._driver_scope = "session"
+        config._wait_scope = "module"
 
     config.stash[metadata_key]["Project"] = "selenium_pytest"
-    config.stash[metadata_key]["Browser"] = browser
-    if not headed:
-        config.stash[metadata_key]["Mode"] = "headless"
+    config.stash[metadata_key]["Browsers"] = ", ".join(browsers)
+    config.stash[metadata_key]["Mode"] = (
+        "Headed" if config.getoption("headed") else "Headless"
+    )
 
-    # Ensure the screenshots folder exists
     os.makedirs("screenshots", exist_ok=True)
-
-    if should_remove:
+    if remove_old:
         logging.info("Removing old screenshots...")
-        for filename in os.listdir("screenshots"):
-            file_path = os.path.join("screenshots", filename)
+        for file in os.listdir("screenshots"):
             try:
-                if os.path.isfile(file_path):
-                    os.unlink(file_path)
+                os.unlink(os.path.join("screenshots", file))
             except Exception as e:
-                logging.error(f"Error deleting file {file_path}: {e}")
+                logging.error(f"Error deleting screenshot: {e}")
 
+def get_driver_scope(fixture_name=None, config=None):
+    return getattr(config, "_driver_scope", "session")
+
+def get_wait_scope(fixture_name=None, config=None):
+    return getattr(config, "_wait_scope", "module")
+
+def pytest_generate_tests(metafunc):
+    browsers = [b.strip() for b in metafunc.config.getoption("browser").split(",")]
+    parallel = metafunc.config.getoption("parallel_browsers")
+    individual = metafunc.config.getoption("individual_browsers")
+
+    if "browser_name" in metafunc.fixturenames:
+        if parallel:
+            # No scope means function scope (default) — required for parallel
+            metafunc.parametrize("browser_name", browsers)
+        elif individual:
+            metafunc.parametrize("browser_name", browsers, scope="session")
+        else:
+            metafunc.parametrize("browser_name", [browsers[0]], scope="session")
+
+
+@pytest.fixture
+def wait(driver, request):
+    timeout = request.config.getoption("timeout")
+    return WebDriverWait(driver, timeout)
+
+@pytest.fixture(scope=get_driver_scope)
+def driver(request, base_url, browser_name):
+    scope = request.config._driver_scope
+    key = f"{browser_name}_{base_url}"
+
+    if scope == "session":
+        if not hasattr(request.config, "driver_cache"):
+            request.config.driver_cache = {}
+        if key not in request.config.driver_cache:
+            instance = create_driver(request, browser_name)
+            instance.get(base_url)
+            request.config.driver_cache[key] = instance
+        return request.config.driver_cache[key]
+    else:
+        instance = create_driver(request, browser_name)
+        instance.get(base_url)
+
+        def teardown():
+            instance.quit()
+
+        request.addfinalizer(teardown)
+        return instance
+
+def create_driver(request, browser_name):
+    headed = request.config.getoption("headed")
+    browser = browser_name.lower()
+
+    if browser == "chrome":
+        options = ChromeOptions()
+        if not headed:
+            options.add_argument("--headless")
+        logging.info("Launching Chrome")
+        return webdriver.Chrome(options=options)
+
+    elif browser == "firefox":
+        options = FirefoxOptions()
+        if not headed:
+            options.add_argument("--headless")
+        logging.info("Launching Firefox")
+        return webdriver.Firefox(options=options)
+
+    elif browser == "edge":
+        options = EdgeOptions()
+        if not headed:
+            options.add_argument("--headless")
+        logging.info("Launching Edge")
+        return webdriver.Edge(options=options)
+
+    else:
+        raise ValueError(f"Unsupported browser: {browser_name}")
 
 def pytest_html_report_title(report):
     report.title = "Automation Report"
 
 
-@pytest.fixture(scope="session")
-def driver(base_url, request):  # uses base_url from test file
-    browser = request.config.getoption("--browser").lower()
-    headed = request.config.getoption("--headed")
-
-    if browser == "firefox":
-        logging.info("Launching Firefox")
-        options = FirefoxOptions()
-        if not headed:
-            options.add_argument("--headless")
-        driver = webdriver.Firefox(options=options)
-    elif browser == "edge":
-        print("Launching Edge")
-        options = EdgeOptions()
-        if not headed:
-            options.add_argument("--headless")
-        driver = webdriver.Edge(options=options)
-    else:
-        logging.info("Launching Chrome")
-        options = ChromeOptions()
-        if not headed:
-            options.add_argument("--headless")
-        driver = webdriver.Chrome(options=options)
-    driver.maximize_window()
-    driver.get(base_url)  # navigate to URL first
-    yield driver
-    driver.quit()
-
-
-@pytest.fixture
-def wait(driver, request):
-    timeout = request.config.getoption("--timeout")
-    return WebDriverWait(driver, timeout)
 
 
 # This hook adds screenshots and driver URL to the HTML report on test failure

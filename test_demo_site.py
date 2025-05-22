@@ -1,10 +1,12 @@
 import pytest
+import logging
 from time import sleep
 from selenium.webdriver.common.by import By
 from selenium.webdriver import ActionChains, Keys
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 from drag_utils import html5_drag_and_drop
+from conftest import get_wait_scope
 
 
 # Set the URL here
@@ -13,10 +15,14 @@ def base_url():
     return "https://seleniumbase.io/demo_page"
 
 
-@pytest.fixture(scope="module", autouse=True)
-def wait_for_element(driver):
+@pytest.fixture(scope=get_wait_scope, autouse=True)
+def wait_for_element(request, driver):
+    wait_scope = getattr(request.config, "_wait_scope", "module")
+    if wait_scope != "module":
+        return
+
     WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "tbodyId")))
-    print("Demo Page Is Visible")
+    logging.info("Demo Page Is Visible")
 
 
 def test_hover_dropdown(driver, wait):
