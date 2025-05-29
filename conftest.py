@@ -112,59 +112,43 @@ def wait(driver, request):
 
 @pytest.fixture(scope=get_driver_scope)
 def driver(request, base_url, browser_name):
-    scope = request.config._driver_scope
-    key = f"{browser_name}_{base_url}"
-
-    if scope == "session":
-        if not hasattr(request.config, "driver_cache"):
-            request.config.driver_cache = {}
-        if key not in request.config.driver_cache:
-            instance = create_driver(request, browser_name)
-            instance.get(base_url)
-            request.config.driver_cache[key] = instance
-        return request.config.driver_cache[key]
-    else:
-        instance = create_driver(request, browser_name)
-        instance.get(base_url)
-
-        def teardown():
-            instance.quit()
-
-        request.addfinalizer(teardown)
-        return instance
-
-def create_driver(request, browser_name):
     headed = request.config.getoption("headed")
     browser = browser_name.lower()
 
+    logging.info(f"Launching {browser.capitalize()} in {'headed' if headed else 'headless'} mode for tests.")
     if browser == "chrome":
         options = ChromeOptions()
         if not headed:
             options.add_argument("--headless")
-        logging.info("Launching Chrome")
-        return webdriver.Chrome(options=options)
+        #logging.info("Launching Chrome")
+        driver = webdriver.Chrome(options=options)
 
     elif browser == "firefox":
         options = FirefoxOptions()
         if not headed:
             options.add_argument("--headless")
-        logging.info("Launching Firefox")
-        return webdriver.Firefox(options=options)
+        #logging.info("Launching Firefox")
+        driver = webdriver.Firefox(options=options)
 
     elif browser == "edge":
         options = EdgeOptions()
         if not headed:
             options.add_argument("--headless")
-        logging.info("Launching Edge")
-        return webdriver.Edge(options=options)
+        #logging.info("Launching Edge")
+        driver = webdriver.Edge(options=options)
 
     else:
         raise ValueError(f"Unsupported browser: {browser_name}")
 
+    driver.maximize_window()
+    driver.get(base_url)
+
+    yield driver
+    logging.info(f"Quitting {browser.capitalize()} browser.")
+    driver.quit()
+
 def pytest_html_report_title(report):
     report.title = "Automation Report"
-
-
 
 
 # This hook adds screenshots and driver URL to the HTML report on test failure
