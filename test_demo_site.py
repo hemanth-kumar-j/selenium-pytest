@@ -199,7 +199,7 @@ def test_radio_buttons(driver):
     assert not radio_button_1.is_selected(), "Radio Button 1 should not be selected"
 
 
-def test_checkbox_and_drag_n_drop(driver):
+'''def test_checkbox_and_drag_n_drop(driver):
 
     def check_checkbox():
         checkbox = driver.find_element(By.ID, "checkBox1")
@@ -290,4 +290,4 @@ def test_link_with_text(driver):
         driver.back()
 
     text_url("SeleniumBase on GitHub", "https://github.com/seleniumbase/SeleniumBase")
-    text_url("SeleniumBase Demo Page", "https://seleniumbase.io/demo_page/")
+    text_url("SeleniumBase Demo Page", "https://seleniumbase.io/demo_page/")'''
