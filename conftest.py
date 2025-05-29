@@ -56,7 +56,7 @@ def pytest_addoption(parser):
 
 def pytest_configure(config):
     #browsers = config.getoption("browser")
-    browsers = [b.strip() for b in config.getoption("browser").split(",")]
+    browsers = config.getoption("browser").split(",")
     parallel_xdist = config.getoption("numprocesses") not in [None, 0]
     individual = config.getoption("individual-browsers", False)
     parallel_browsers = config.getoption("parallel_browsers", False)
@@ -91,7 +91,7 @@ def get_wait_scope(fixture_name=None, config=None):
     return getattr(config, "_wait_scope", "module")
 
 def pytest_generate_tests(metafunc):
-    browsers = [b.strip() for b in metafunc.config.getoption("browser").split(",")]
+    browsers = metafunc.config.getoption("browser").split(",")
     parallel = metafunc.config.getoption("parallel_browsers")
     individual = metafunc.config.getoption("individual_browsers")
 
