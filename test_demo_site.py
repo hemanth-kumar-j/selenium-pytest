@@ -6,7 +6,7 @@ from selenium.webdriver import ActionChains, Keys
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 from drag_utils import html5_drag_and_drop
-from conftest import get_wait_scope
+from conftest import get_scope
 
 
 # Set the URL here
@@ -15,7 +15,7 @@ def base_url():
     return "https://seleniumbase.io/demo_page"
 
 
-@pytest.fixture(scope=get_wait_scope, autouse=True)
+@pytest.fixture(scope=get_scope, autouse=True)
 def wait_for_element(request, driver):
     wait_scope = getattr(request.config, "_wait_scope", "module")
     if wait_scope != "module":

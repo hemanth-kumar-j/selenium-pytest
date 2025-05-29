@@ -55,7 +55,6 @@ def pytest_addoption(parser):
     )
 
 def pytest_configure(config):
-    #browsers = config.getoption("browser")
     browsers = config.getoption("browser").split(",")
     parallel_xdist = config.getoption("numprocesses") not in [None, 0]
     individual = config.getoption("individual-browsers", False)
@@ -63,11 +62,9 @@ def pytest_configure(config):
     remove_old = config.getoption("remove")
 
     if (parallel_xdist and len(browsers) > 1) or (parallel_browsers):
-        config._driver_scope = "function"
-        config._wait_scope = "function"
+        config._scope = "function"
     else:
-        config._driver_scope = "session"
-        config._wait_scope = "module"
+        config._scope = "module"
 
     config.stash[metadata_key]["Project"] = "selenium_pytest"
     config.stash[metadata_key]["Browsers"] = ", ".join(browsers)
@@ -84,11 +81,8 @@ def pytest_configure(config):
             except Exception as e:
                 logging.error(f"Error deleting screenshot: {e}")
 
-def get_driver_scope(fixture_name=None, config=None):
-    return getattr(config, "_driver_scope", "session")
-
-def get_wait_scope(fixture_name=None, config=None):
-    return getattr(config, "_wait_scope", "module")
+def get_scope(fixture_name=None, config=None):
+    return getattr(config, "_scope", "session")
 
 def pytest_generate_tests(metafunc):
     browsers = metafunc.config.getoption("browser").split(",")
@@ -110,7 +104,7 @@ def wait(driver, request):
     timeout = request.config.getoption("timeout")
     return WebDriverWait(driver, timeout)
 
-@pytest.fixture(scope=get_driver_scope)
+@pytest.fixture(scope=get_scope)
 def driver(request, base_url, browser_name):
     headed = request.config.getoption("headed")
     browser = browser_name.lower()
