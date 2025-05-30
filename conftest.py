@@ -56,15 +56,20 @@ def pytest_addoption(parser):
 
 def pytest_configure(config):
     browsers = config.getoption("browser").split(",")
-    parallel_xdist = config.getoption("numprocesses") not in [None, 0]
-    individual = config.getoption("individual-browsers", False)
-    parallel_browsers = config.getoption("parallel_browsers", False)
     remove_old = config.getoption("remove")
-
-    if (parallel_xdist and len(browsers) > 1) or (parallel_browsers):
-        config._scope = "function"
+    if hasattr(config, "workerinput"):
+        config._scope = config.workerinput.get("scope", "module")
     else:
-        config._scope = "module"
+        browsers = config.getoption("browser").split(",")
+        parallel_xdist = config.getoption("numprocesses") not in [None, 0]
+        individual = config.getoption("individual-browsers", False)
+        parallel_browsers = config.getoption("parallel_browsers", False)
+
+        if parallel_xdist:
+            config._scope = "function"
+        else:
+            config._scope = "module"
+        logging.info(f"[pytest_configure] Selected scope: {config._scope}")
 
     config.stash[metadata_key]["Project"] = "selenium_pytest"
     config.stash[metadata_key]["Browsers"] = ", ".join(browsers)
@@ -84,19 +89,28 @@ def pytest_configure(config):
 def get_scope(fixture_name=None, config=None):
     return getattr(config, "_scope", "session")
 
+def pytest_configure_node(node):
+    # This sends the scope to each xdist worker
+    node.workerinput["scope"] = node.config._scope
+
+@pytest.fixture(scope="session")
+def browser_name(pytestconfig):
+    return pytestconfig.getoption("browser")
+
 def pytest_generate_tests(metafunc):
     browsers = metafunc.config.getoption("browser").split(",")
     parallel = metafunc.config.getoption("parallel_browsers")
     individual = metafunc.config.getoption("individual_browsers")
+    parallel_xdist = metafunc.config.getoption("numprocesses") not in [None, 0]
 
     if "browser_name" in metafunc.fixturenames:
-        if parallel:
+        if parallel_xdist or parallel:
             # No scope means function scope (default) — required for parallel
             metafunc.parametrize("browser_name", browsers)
         elif individual:
-            metafunc.parametrize("browser_name", browsers, scope="session")
+            metafunc.parametrize("browser_name", browsers, scope="module")
         else:
-            metafunc.parametrize("browser_name", [browsers[0]], scope="session")
+            metafunc.parametrize("browser_name", [browsers[0]], scope="module")
 
 
 @pytest.fixture

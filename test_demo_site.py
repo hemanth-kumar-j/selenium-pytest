@@ -10,7 +10,7 @@ from conftest import get_scope
 
 
 # Set the URL here
-@pytest.fixture(scope="session")
+@pytest.fixture(scope=get_scope)
 def base_url():
     return "https://seleniumbase.io/demo_page"
 
