@@ -1,8 +1,10 @@
 import os
+import sys
 import time
 import base64
 import pytest
 import logging
+import subprocess
 import pytest_html
 
 from selenium import webdriver
@@ -54,17 +56,48 @@ def pytest_addoption(parser):
         help="Run tests in parallel across browsers",
     )
 
+def run_parallel_browsers_via_subprocess():
+    browser_opt = next((arg for arg in sys.argv if arg.startswith("--browser=")), None)
+    if not browser_opt:
+        print("No --browser option provided. Exiting.")
+        sys.exit(1)
+
+    browsers = browser_opt.split("=")[1].split(",")
+    extra_args = [
+        arg for arg in sys.argv[1:]
+        if not arg.startswith("--browser") and arg != "--parallel-browsers"
+    ]
+
+    base_cmd = [sys.executable, "-m", "pytest"]
+    processes = []
+
+    for browser in browsers:
+        cmd = base_cmd + [f"--browser={browser}"] + extra_args
+        env = os.environ.copy()
+        env["IS_SUBPROCESS"] = "1"  # ✅ Prevent recursion
+        print(f"\n[Launching] {' '.join(cmd)}")
+        processes.append(subprocess.Popen(cmd, env=env))
+
+    for p in processes:
+        p.wait()
+
+# Run subprocesses only on root pytest execution
+if __name__ == "__main__" or (
+    os.getenv("IS_SUBPROCESS") != "1"
+    and "--parallel-browsers" in sys.argv
+):
+    run_parallel_browsers_via_subprocess()
+    sys.exit(0)  # Exit parent pytest after launching subprocesses
+
 def pytest_configure(config):
     browsers = config.getoption("browser").split(",")
+    parallel_xdist = config.getoption("numprocesses") not in [None, 0]
+    individual = config.getoption("individual_browsers")
+    #parallel_browsers = config.getoption("parallel_browsers")
     remove_old = config.getoption("remove")
     if hasattr(config, "workerinput"):
         config._scope = config.workerinput.get("scope", "module")
     else:
-        browsers = config.getoption("browser").split(",")
-        parallel_xdist = config.getoption("numprocesses") not in [None, 0]
-        individual = config.getoption("individual-browsers", False)
-        parallel_browsers = config.getoption("parallel_browsers", False)
-
         if parallel_xdist:
             config._scope = "function"
         else:
@@ -99,12 +132,12 @@ def browser_name(pytestconfig):
 
 def pytest_generate_tests(metafunc):
     browsers = metafunc.config.getoption("browser").split(",")
-    parallel = metafunc.config.getoption("parallel_browsers")
+    #parallel = metafunc.config.getoption("parallel_browsers")
     individual = metafunc.config.getoption("individual_browsers")
     parallel_xdist = metafunc.config.getoption("numprocesses") not in [None, 0]
 
     if "browser_name" in metafunc.fixturenames:
-        if parallel_xdist or parallel:
+        if parallel_xdist:
             # No scope means function scope (default) — required for parallel
             metafunc.parametrize("browser_name", browsers)
         elif individual:
