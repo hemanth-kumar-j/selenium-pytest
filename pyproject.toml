@@ -11,6 +11,7 @@ dependencies = [
     "pytest-html>=4.1.1",
     "black>=25.1.0",
     "pytest-xdist>=3.6.1",
+    "pytest-html-merger>=0.1.0",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"

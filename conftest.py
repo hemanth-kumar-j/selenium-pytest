@@ -1,11 +1,13 @@
 import os
 import sys
+import glob
 import time
 import base64
 import pytest
 import logging
 import subprocess
 import pytest_html
+from pytest_html_merger.main import merge_html_files
 
 from selenium import webdriver
 from pytest_metadata.plugin import metadata_key
@@ -56,7 +58,19 @@ def pytest_addoption(parser):
         help="Run tests in parallel across browsers",
     )
 
-def run_parallel_browsers_via_subprocess():
+def merge_parallel_browser_reports(config, browsers: list[str]):
+    report_files = sorted(glob.glob("reports/report_*.html"))
+
+    if not report_files:
+        raise RuntimeError("No report files found to merge.")
+
+    output_file = "reports/report.html"
+    title = "Parallel Browsers Report"
+
+    merge_html_files("reports", output_file, title)
+    print(f"Merged reports to {output_file}")
+
+def run_parallel_browsers_via_subprocess(config):
     browser_opt = next((arg for arg in sys.argv if arg.startswith("--browser=")), None)
     if not browser_opt:
         print("No --browser option provided. Exiting.")
@@ -71,23 +85,33 @@ def run_parallel_browsers_via_subprocess():
     base_cmd = [sys.executable, "-m", "pytest"]
     processes = []
 
+    os.makedirs("reports", exist_ok=True)
+
+    for f in glob.glob("reports/report_*.html"):
+        os.remove(f)
+        logging.info(f"Removed old {f}...")
+
     for browser in browsers:
-        cmd = base_cmd + [f"--browser={browser}"] + extra_args
+        html_report = f"reports/report_{browser}.html"
+        cmd = base_cmd + [
+            f"--browser={browser}",
+            f"--html={html_report}",
+            "--self-contained-html"
+        ] + extra_args
         env = os.environ.copy()
-        env["IS_SUBPROCESS"] = "1"  # ✅ Prevent recursion
+        env["IS_SUBPROCESS"] = "1"  # Prevent recursion
         print(f"\n[Launching] {' '.join(cmd)}")
         processes.append(subprocess.Popen(cmd, env=env))
 
     for p in processes:
         p.wait()
 
-# Run subprocesses only on root pytest execution
-if __name__ == "__main__" or (
-    os.getenv("IS_SUBPROCESS") != "1"
-    and "--parallel-browsers" in sys.argv
-):
-    run_parallel_browsers_via_subprocess()
-    sys.exit(0)  # Exit parent pytest after launching subprocesses
+    merge_parallel_browser_reports(config, browsers)
+
+def pytest_cmdline_main(config):
+    if config.getoption("parallel_browsers"):
+        run_parallel_browsers_via_subprocess(config)
+        return 0  # Exit parent run after launching subprocesses
 
 def pytest_configure(config):
     browsers = config.getoption("browser").split(",")
