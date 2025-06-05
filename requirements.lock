@@ -13,6 +13,7 @@ attrs==25.1.0
     # via trio
 beautifulsoup4==4.13.4
     # via pytest-html-merger
+    # via selenium-pytest
 black==25.1.0
     # via selenium-pytest
 certifi==2025.1.31

@@ -2,11 +2,13 @@ import os
 import sys
 import glob
 import time
+import json
 import base64
 import pytest
 import logging
 import subprocess
 import pytest_html
+from bs4 import BeautifulSoup
 from pytest_html_merger.main import merge_html_files
 
 from selenium import webdriver
@@ -58,6 +60,55 @@ def pytest_addoption(parser):
         help="Run tests in parallel across browsers",
     )
 
+def update_browsers_in_html_report(report_path: str, browsers: list[str]):
+    """
+    Modifies an existing merged HTML report by updating the 'Browsers' entry
+    within the JSON data stored in the 'data-jsonblob' attribute.
+    """
+    if not os.path.exists(report_path):
+        logging.error(f"Report file not found at '{report_path}'. Cannot update browsers.")
+        return # Do not raise, just log and exit if file is missing
+
+    try:
+        with open(report_path, 'r', encoding='utf-8') as f:
+            soup = BeautifulSoup(f, 'html.parser')
+
+        data_container_div = soup.find('div', id='data-container')
+
+        if data_container_div and 'data-jsonblob' in data_container_div.attrs:
+            json_blob_str = data_container_div['data-jsonblob']
+
+            report_data = json.loads(json_blob_str)
+
+            if 'environment' in report_data:
+                original_browsers = report_data['environment'].get('Browsers', 'Not found')
+                updated_browsers_str = ", ".join(browsers)
+                report_data['environment']['Browsers'] = updated_browsers_str
+            else:
+                logging.warning("No 'environment' key found in data-jsonblob. Cannot update browsers.")
+
+            updated_json_blob_str = json.dumps(report_data, indent=None, separators=(',', ':'))
+
+            data_container_div['data-jsonblob'] = updated_json_blob_str
+
+            with open(report_path, 'w', encoding='utf-8') as f:
+                f.write(str(soup))
+            logging.info(f"Successfully modified HTML report at '{report_path}'.")
+
+        else:
+            logging.error(f"Could not find div with id='data-container' or 'data-jsonblob' attribute in '{report_path}'.")
+            logging.warning("Please ensure the HTML structure matches the expected pytest-html report format.")
+
+    except json.JSONDecodeError as e:
+        logging.error(f"Failed to decode JSON from 'data-jsonblob' attribute: {e}")
+        # Note: json_blob_str might not be defined if 'data-jsonblob' was not found.
+        # Ensure it's defined before attempting to slice it.
+        error_json_preview = json_blob_str[:500] if 'json_blob_str' in locals() else 'N/A'
+        logging.error(f"The content of 'data-jsonblob' might be malformed: {error_json_preview}...")
+    except Exception as e:
+        logging.error(f"An unexpected error occurred while modifying the HTML report: {e}")
+        logging.error(f"Error details: {e.__class__.__name__}: {e}")
+
 def merge_parallel_browser_reports(config, browsers: list[str]):
     report_files = sorted(glob.glob("reports/report_*.html"))
 
@@ -69,6 +120,9 @@ def merge_parallel_browser_reports(config, browsers: list[str]):
 
     merge_html_files("reports", output_file, title)
     print(f"Merged reports to {output_file}")
+
+    # Update the browsers in the merged report's JSON blob
+    update_browsers_in_html_report(output_file, browsers)
 
 def run_parallel_browsers_via_subprocess(config):
     browser_opt = next((arg for arg in sys.argv if arg.startswith("--browser=")), None)
