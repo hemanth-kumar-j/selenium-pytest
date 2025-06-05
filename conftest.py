@@ -196,6 +196,7 @@ def pytest_configure(config):
     browsers = config.getoption("browser").split(",")
     parallel_xdist = config.getoption("numprocesses") not in [None, 0]
     individual = config.getoption("individual_browsers")
+    subprocess = os.environ.get("IS_SUBPROCESS")
     remove_old = config.getoption("remove")
     if hasattr(config, "workerinput"):
         config._scope = config.workerinput.get("scope", "module")
@@ -208,9 +209,13 @@ def pytest_configure(config):
 
     config.stash[metadata_key]["Project"] = "selenium_pytest"
     config.stash[metadata_key]["Browsers"] = ", ".join(browsers)
-    config.stash[metadata_key]["Mode"] = (
-        "Headed" if config.getoption("headed") else "Headless"
+    config.stash[metadata_key]["Display Mode"] = (
+        "headed" if config.getoption("headed") else "headless"
     )
+    if individual or subprocess:
+        config.stash[metadata_key]["Browser Execution Mode"] = (
+            "individual-browsers" if individual else "parallel-browsers"
+        )
 
     os.makedirs("screenshots", exist_ok=True)
     if remove_old:
