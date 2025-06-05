@@ -8,6 +8,7 @@ A simple Selenium test suite using Pytest to automate UI testing on the Selenium
 
 - `test_demo_site.py` — Main test cases
 - `conftest.py` — Fixtures and setup for WebDriver
+- `drag_utils.py` — Drang and Drop helper
 - `screenshots/` — Saved screenshots from failed tests
 - `reports/report.html` — Test execution report (generated automatically)
 
@@ -34,28 +35,52 @@ rye sync
 pytest
 ```
 
-### 5. Run Tests with Browser UI (Headed Mode)
+### 5. Run Tests with Parallel Execution
+```bash
+pytest -n 3
+pytest --browser=edge -n 2
+```
+
+### 6. Run Tests with Browser UI (Headed Mode)
 ```bash
 pytest --headed
 ```
 
-### 6. Run Tests with Other Browsers
+### 7. Run Tests with Other Browsers
 ```bash
 pytest --browser=firefox
 pytest --browser=edge
 ```
 
-### 7. Set a Custom Timeout (in seconds)
+### 8. Run Tests with Individual Browsers
+```bash
+pytest --browser=chrome,edge,firefox --individual-browsers
+pytest --browser=edge,chrome --individual-browsers
+```
+
+### 9. Run Tests with Parallel Execution In Individual Browsers
+```bash
+pytest --browser=chrome,edge --individual-browsers -n 2
+pytest --browser=edge,firefox --individual-browsers -n 2
+```
+
+### 10. Run Tests with Parallel Browsers
+```bash
+pytest --browser=chrome,edge,firefox --parallel-browsers
+pytest --browser=edge,chrome --parallel-browsers
+```
+
+### 11. Set a Custom Timeout (in seconds)
 ```bash
 pytest --timeout=20
 ```
 
-### 8. Remove Old Screenshots Before Test Run
+### 12. Remove Old Screenshots Before Test Run
 ```bash
 pytest --remove
 ```
 
-### 9. View Test Report
+### 13. View Test Report
 Open `reports/report.html` in your browser.
 
 ---
