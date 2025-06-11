@@ -1,5 +1,5 @@
 [project]
-name = "selenium_pytest"
+name = "selenium-pytest"
 version = "0.1.0"
 description = "Add your description here"
 authors = [
