@@ -149,7 +149,9 @@ def merge_parallel_browser_reports(config, browsers: list[str]):
 def run_parallel_browsers_via_subprocess(config):
     browser_opt = next((arg for arg in sys.argv if arg.startswith("--browser=")), None)
     if not browser_opt:
-        print("No --browser option provided. Exiting.")
+        print(
+            "No --browser option provided. Exiting. Add '--browser=browser names' and try again."
+        )
         sys.exit(1)
 
     browsers = browser_opt.split("=")[1].split(",")
@@ -188,6 +190,11 @@ def run_parallel_browsers_via_subprocess(config):
 
 def pytest_cmdline_main(config):
     if config.getoption("parallel_browsers"):
+        if config.getoption("numprocesses") not in [None, 0]:
+            print(
+                '"--parallel-browsers" cannot be used with "-n". Please remove "-n" and try again.'
+            )
+            sys.exit(1)
         run_parallel_browsers_via_subprocess(config)
         return 0  # Exit parent run after launching subprocesses
 
@@ -239,7 +246,9 @@ def get_scope(fixture_name=None, config=None):
 def pytest_configure_node(node):
     # Pass values from main process to xdist worker subprocess
     node.workerinput["scope"] = node.config._scope
-    node.workerinput["execution_mode"] = getattr(node.config, "_execution_mode", "sequence-tests")
+    node.workerinput["execution_mode"] = getattr(
+        node.config, "_execution_mode", "sequence-tests"
+    )
 
 
 @pytest.fixture(scope="session")
