@@ -194,20 +194,25 @@ def pytest_cmdline_main(config):
 
 def pytest_configure(config):
     browsers = config.getoption("browser").split(",")
-    parallel_xdist = config.getoption("numprocesses") not in [None, 0]
     individual = config.getoption("individual_browsers")
     subprocess = os.environ.get("IS_SUBPROCESS")
     remove_old = config.getoption("remove")
+    # In subprocess workers launched by xdist (-n), config will have workerinput
     if hasattr(config, "workerinput"):
+        # These are passed from the main process via pytest_configure_node
+        execution_mode = config.workerinput.get("execution_mode", "sequence-tests")
         config._scope = config.workerinput.get("scope", "module")
     else:
-        if parallel_xdist:
-            config._scope = "function"
-        else:
-            config._scope = "module"
+        # This is the main pytest process (not a worker)
+        parallel_xdist = config.getoption("numprocesses") not in [None, 0]
+        execution_mode = "parallel-tests" if parallel_xdist else "sequence-tests"
+        config._scope = "function" if parallel_xdist else "module"
+        config._execution_mode = execution_mode  # This will be passed to workers
         logging.info(f"[pytest_configure] Selected scope: {config._scope}")
 
+    # Add info to HTML report
     config.stash[metadata_key]["Project"] = "selenium_pytest"
+    config.stash[metadata_key]["Test Execution Mode"] = execution_mode
     config.stash[metadata_key]["Browsers"] = ", ".join(browsers)
     config.stash[metadata_key]["Display Mode"] = (
         "headed" if config.getoption("headed") else "headless"
@@ -232,8 +237,9 @@ def get_scope(fixture_name=None, config=None):
 
 
 def pytest_configure_node(node):
-    # This sends the scope to each xdist worker
+    # Pass values from main process to xdist worker subprocess
     node.workerinput["scope"] = node.config._scope
+    node.workerinput["execution_mode"] = getattr(node.config, "_execution_mode", "sequence-tests")
 
 
 @pytest.fixture(scope="session")
