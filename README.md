@@ -8,7 +8,7 @@ A simple Selenium test suite using Pytest to automate UI testing on the Selenium
 
 - `test_demo_site.py` — Main test cases
 - `conftest.py` — Fixtures and setup for WebDriver
-- `drag_utils.py` — Drang and Drop helper
+- `drag_utils.py` — Drag and Drop helper
 - `screenshots/` — Saved screenshots from failed tests
 - `reports/report.html` — Test execution report (generated automatically)
 
