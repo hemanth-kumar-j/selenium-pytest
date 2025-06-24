@@ -19,7 +19,7 @@ A simple Selenium test suite using Pytest to automate UI testing on the Selenium
 ### 1. Clone the Repository
 ```bash
 git clone https://github.com/hemanth-kumar-j/selenium-pytest.git
-cd selenium_pytest
+cd selenium-pytest
 ```
 
 ### 2. Install Rye (if not already installed)

@@ -229,7 +229,9 @@ def pytest_configure(config):
             "individual-browsers" if individual else "parallel-browsers"
         )
 
+    # Ensure the screenshots folder exists
     os.makedirs("screenshots", exist_ok=True)
+
     if remove_old:
         logging.info("Removing old screenshots...")
         for file in os.listdir("screenshots"):
